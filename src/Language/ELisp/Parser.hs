@@ -23,7 +23,7 @@ elispDef = PT.LanguageDef
   , PT.identLetter     = P.alphaNum <|> P.oneOf  "<>:/+-=~#$%^&*_"
   , PT.opStart         = P.unexpected "No Op"
   , PT.opLetter        = P.unexpected "No Op Letter"
-  , PT.reservedNames   = []
+  , PT.reservedNames   = ["defun"]
   , PT.reservedOpNames = ["`", "'", "@" , "?"] 
   , PT.caseSensitive   = True
   }
@@ -49,6 +49,7 @@ backquote   = PT.symbol        lexer "`"
 at          = PT.symbol        lexer "@"
 question    = PT.symbol        lexer "?"
 spaces      = PT.whiteSpace    lexer
+reserved    = PT.reserved      lexer
 lexeme      = PT.lexeme        lexer
 
 --------------------------------------------------
@@ -144,10 +145,16 @@ parseESExps = parseESExp1 `P.sepBy` consform
            <?> "ELisp List of SExp"
   where consform = spaces *> P.optional (dot *> spaces)
 
+parseDefun :: Parser ESExp
+parseDefun = ES_Defun <$> (reserved "defun" *> ident)
+                      <*> parens (ident `P.sepBy` spaces)
+                      <*> P.option Nothing (Just <$> stringLit)
+                      <*> parseESExps
+
 parseESExp1 :: Parser ESExp
 parseESExp1 =  ES_Lit      <$> P.try parseELit
            <|> ES_Name     <$> P.try ident
-           <|> ES_List     <$> parens parseESExps
+           <|> parens (P.try parseDefun <|> (ES_List <$> parseESExps))
            <|> ES_Vector   <$> brackets parseESExps
            <|> ES_Quote    <$> (quote       *> parseESExp1)
            <|> ES_BQuote   <$> (backquote   *> parseESExp1)

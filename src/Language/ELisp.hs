@@ -20,5 +20,8 @@ data ESExp
   | ES_CommaAt  ESExp
   -- Question mark
   | ES_Question ESExp
+  -- We'll lift defun to a constructor in the AST
+  -- for easier control.
+  | ES_Defun String [String] (Maybe String) [ESExp]
   deriving (Eq , Show)
 
