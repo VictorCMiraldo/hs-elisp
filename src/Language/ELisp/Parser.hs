@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Language.ELisp.Parser where
+module Language.ELisp.Parser (parseFile, parseString) where
 
 import           Control.Monad.Identity
 
 import           Data.Char         (isSpace, digitToInt)
 import qualified Data.Text         as T
 import qualified Data.Text.IO      as T
+import qualified Data.List         as L (lookup)
 import qualified Text.Parsec       as P
 import           Text.Parsec       ((<|>), (<?>))
 import qualified Text.Parsec.Token as PT
@@ -19,11 +20,11 @@ elispDef = PT.LanguageDef
   , PT.commentEnd      = ""
   , PT.commentLine     = ";"
   , PT.nestedComments  = False
-  , PT.identStart      = P.letter   <|> P.oneOf "<>:/+-=~#$%^&*_"
-  , PT.identLetter     = P.alphaNum <|> P.oneOf  "<>:/+-=~#$%^&*_"
+  , PT.identStart      = P.letter   <|> P.oneOf "\\!<>:/+-=~#$%^&*_"
+  , PT.identLetter     = P.alphaNum <|> P.oneOf  "!<>:@/+-=~#$%^&*_?"
   , PT.opStart         = P.unexpected "No Op"
   , PT.opLetter        = P.unexpected "No Op Letter"
-  , PT.reservedNames   = ["defun"]
+  , PT.reservedNames   = []
   , PT.reservedOpNames = ["`", "'", "@" , "?"] 
   , PT.caseSensitive   = True
   }
@@ -51,6 +52,8 @@ question    = PT.symbol        lexer "?"
 spaces      = PT.whiteSpace    lexer
 reserved    = PT.reserved      lexer
 lexeme      = PT.lexeme        lexer
+
+escMap = zip ("().dsabfnrtvC\\\"\'") ("().\0x7F \a\b\f\n\r\t\vC\\\"\'")
 
 --------------------------------------------------
 -- I copied the stringLiteral code from Text.Parsec.Token
@@ -107,7 +110,6 @@ stringLit   = lexeme (
 
 
     -- escape code tables
-    escMap          = zip ("().abfnrtv\\\"\'") ("().\a\b\f\n\r\t\v\\\"\'")
     asciiMap        = zip (ascii3codes ++ ascii2codes) (ascii3 ++ ascii2)
 
     ascii2codes     = ["BS","HT","LF","VT","FF","CR","SO","SI","EM",
@@ -135,10 +137,19 @@ parseELit :: Parser ELit
 parseELit =  EL_Int    <$> (integer <|> hexadecimal <|> octal)
          <|> EL_Float  <$> float
          <|> EL_String <$> stringLit
+         <|> EL_Char   <$> (question *> charLit)
          <?> "Literal"
 
-sep :: Parser ()
-sep = spaces <|> (spaces *> dot *> spaces)
+charLit :: Parser Char
+charLit = do
+  c <- P.anyChar
+  if c /= '\\'
+  then return c
+  else do
+    next <- P.anyChar
+    case L.lookup next escMap of
+      Nothing -> fail "invalid escape sequence"
+      Just r  -> return r
 
 parseESExps :: Parser [ESExp]
 parseESExps = parseESExp1 `P.sepBy` consform
@@ -146,7 +157,7 @@ parseESExps = parseESExp1 `P.sepBy` consform
   where consform = spaces *> P.optional (dot *> spaces)
 
 parseDefun :: Parser ESExp
-parseDefun = ES_Defun <$> (reserved "defun" *> ident)
+parseDefun = ES_Defun <$> (lexeme (P.string "defun") *> ident)
                       <*> parens (ident `P.sepBy` spaces)
                       <*> P.option Nothing (Just <$> stringLit)
                       <*> parseESExps
@@ -160,13 +171,15 @@ parseESExp1 =  ES_Lit      <$> P.try parseELit
            <|> ES_BQuote   <$> (backquote   *> parseESExp1)
            <|> ES_Comma    <$> P.try (comma *> P.notFollowedBy at *> parseESExp1)
            <|> ES_CommaAt  <$> (comma *> at *> parseESExp1)
-           <|> ES_Question <$> (question    *> P.optional (P.char '\\') *> parseESExp1)
            <?> "ELisp SExp"
 
 parseModule :: Parser [ESExp]
 parseModule = spaces *> parseESExp1 `P.sepBy1` spaces <* P.eof
 
 --------------------------------------------------
+
+test :: Parser a -> T.Text -> Either P.ParseError a
+test p = P.parse p "<test>" 
            
 parseString :: String -> Either P.ParseError [ESExp]
 parseString str = P.parse parseModule "" (T.pack str)
@@ -174,7 +187,11 @@ parseString str = P.parse parseModule "" (T.pack str)
 parseFile :: FilePath -> IO (Either P.ParseError [ESExp])
 parseFile file = P.parse parseModule file <$> T.readFile file
 
-tt = T.pack $ unlines
-  [ "\"lala lala."
-  , "omg, thats a long\\"
-  , "\\\\<one>\""]
+x = unlines $
+   [ "defun async--transmit-sexp (process sexp)"
+   , "  (with-temp-buffer"
+   , "    (if async-debug"
+   , "        (message \"Transmitting sexp {{{%s}}}\" (pp-to-string sexp)))"
+   , "    (async--insert-sexp sexp)"
+   , "    (process-send-region process (point-min) (point-max)))" ]
+

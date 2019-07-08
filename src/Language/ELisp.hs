@@ -4,6 +4,7 @@ data ELit
   = EL_Int    Integer
   | EL_Float  Double
   | EL_String String
+  | EL_Char   Char
   deriving (Eq , Show)
 
 data ESExp
@@ -18,8 +19,6 @@ data ESExp
   | ES_BQuote   ESExp
   | ES_Comma    ESExp
   | ES_CommaAt  ESExp
-  -- Question mark
-  | ES_Question ESExp
   -- We'll lift defun to a constructor in the AST
   -- for easier control.
   | ES_Defun String [String] (Maybe String) [ESExp]
