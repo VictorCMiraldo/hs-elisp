@@ -52,7 +52,7 @@ spaces      = PT.whiteSpace    lexer
 reserved    = PT.reserved      lexer
 lexeme      = PT.lexeme        lexer
 
-escMap = zip (":()[].dsabfnrtvCMwe\\\"\'") (":()[].\0x7F \a\b\f\n\r\t\vCMwe\\\"\'")
+escMap = zip ("+*:()[].dsabfnrtvCMwe\\\"\'") ("+*:()[].\0x7F \a\b\f\n\r\t\vCMwe\\\"\'")
 
 --------------------------------------------------
 -- I copied the stringLiteral code from Text.Parsec.Token
