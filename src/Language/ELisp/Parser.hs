@@ -156,16 +156,19 @@ parseESExps = parseESExp1 `P.sepBy` consform
            <?> "ELisp List of SExp"
   where consform = spaces *> P.optional (dot *> spaces)
 
+{-
 parseDefun :: Parser ESExp
 parseDefun = ES_Defun <$> (lexeme (P.string "defun") *> ident)
                       <*> parens (ident `P.sepBy` spaces)
                       <*> P.option Nothing (Just <$> stringLit)
                       <*> parseESExps
+-}
 
 parseESExp1 :: Parser ESExp
 parseESExp1 =  ES_Lit      <$> P.try parseELit
            <|> ES_Name     <$> P.try ident
-           <|> parens (P.try parseDefun <|> (ES_List <$> parseESExps))
+           -- <|> parens (P.try parseDefun <|> (ES_List <$> parseESExps))
+           <|> ES_List     <$> parens parseESExps
            <|> ES_Vector   <$> brackets parseESExps
            <|> ES_Quote    <$> (quote       *> parseESExp1)
            <|> ES_BQuote   <$> (backquote   *> parseESExp1)

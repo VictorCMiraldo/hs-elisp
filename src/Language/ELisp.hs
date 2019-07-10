@@ -21,6 +21,7 @@ data ESExp
   | ES_CommaAt  ESExp
   -- We'll lift defun to a constructor in the AST
   -- for easier control.
-  | ES_Defun String [String] (Maybe String) [ESExp]
+  -- This is breaking ghc when used with generics-mrsop for whatever reason
+  -- | ES_Defun String [ESExp] (Maybe String) [ESExp]
   deriving (Eq , Show)
 
