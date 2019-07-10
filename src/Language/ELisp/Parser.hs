@@ -53,7 +53,7 @@ spaces      = PT.whiteSpace    lexer
 reserved    = PT.reserved      lexer
 lexeme      = PT.lexeme        lexer
 
-escMap = zip ("().dsabfnrtvC\\\"\'") ("().\0x7F \a\b\f\n\r\t\vC\\\"\'")
+escMap = zip ("()[].dsabfnrtvC\\\"\'") ("()[].\0x7F \a\b\f\n\r\t\vC\\\"\'")
 
 --------------------------------------------------
 -- I copied the stringLiteral code from Text.Parsec.Token
@@ -148,7 +148,7 @@ charLit = do
   else do
     next <- P.anyChar
     case L.lookup next escMap of
-      Nothing -> fail "invalid escape sequence"
+      Nothing -> return next
       Just r  -> return r
 
 parseESExps :: Parser [ESExp]
