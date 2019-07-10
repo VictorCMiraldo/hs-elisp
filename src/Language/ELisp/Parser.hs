@@ -48,12 +48,11 @@ dot         = PT.dot           lexer
 quote       = PT.symbol        lexer "'"
 backquote   = PT.symbol        lexer "`"
 at          = PT.symbol        lexer "@"
-question    = PT.symbol        lexer "?"
 spaces      = PT.whiteSpace    lexer
 reserved    = PT.reserved      lexer
 lexeme      = PT.lexeme        lexer
 
-escMap = zip ("()[].dsabfnrtvC\\\"\'") ("()[].\0x7F \a\b\f\n\r\t\vC\\\"\'")
+escMap = zip (":()[].dsabfnrtvC\\\"\'") (":()[].\0x7F \a\b\f\n\r\t\vC\\\"\'")
 
 --------------------------------------------------
 -- I copied the stringLiteral code from Text.Parsec.Token
@@ -133,6 +132,10 @@ stringLit   = lexeme (
 
 ---------------------------------------------------
 
+-- It is VERY important to not 'lexeme' the question mark!
+question :: Parser ()
+question = P.char '?' >> return ()
+
 parseELit :: Parser ELit
 parseELit =  EL_Int    <$> (integer <|> hexadecimal <|> octal)
          <|> EL_Float  <$> float
@@ -156,19 +159,16 @@ parseESExps = parseESExp1 `P.sepBy` consform
            <?> "ELisp List of SExp"
   where consform = spaces *> P.optional (dot *> spaces)
 
-{-
 parseDefun :: Parser ESExp
 parseDefun = ES_Defun <$> (lexeme (P.string "defun") *> ident)
-                      <*> parens (ident `P.sepBy` spaces)
-                      <*> P.option Nothing (Just <$> stringLit)
+                      <*> (map ES_Name <$> parens (ident `P.sepBy` spaces))
+                      <*> P.option "" stringLit
                       <*> parseESExps
--}
 
 parseESExp1 :: Parser ESExp
 parseESExp1 =  ES_Lit      <$> P.try parseELit
            <|> ES_Name     <$> P.try ident
-           -- <|> parens (P.try parseDefun <|> (ES_List <$> parseESExps))
-           <|> ES_List     <$> parens parseESExps
+           <|> parens (P.try parseDefun <|> (ES_List <$> parseESExps))
            <|> ES_Vector   <$> brackets parseESExps
            <|> ES_Quote    <$> (quote       *> parseESExp1)
            <|> ES_BQuote   <$> (backquote   *> parseESExp1)
