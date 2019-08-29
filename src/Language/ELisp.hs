@@ -1,4 +1,15 @@
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs                 #-}
 module Language.ELisp where
+
+import Generics.MRSOP.Base
+import Generics.MRSOP.TH
+import Generics.MRSOP.Opaque
 
 data ELit
   = EL_Int    Integer
@@ -24,3 +35,4 @@ data ESExp
   | ES_Defun String [String] (Maybe String) [ESExp]
   deriving (Eq , Show)
 
+deriveFamily [t| ESExp |]

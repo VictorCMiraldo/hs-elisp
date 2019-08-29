@@ -17,6 +17,7 @@ library
                ,       parsec
                ,       mtl
                ,       directory
+               ,       generics-mrsop >= 2.1.0
 
   hs-source-dirs:      src
   default-language:    Haskell2010
